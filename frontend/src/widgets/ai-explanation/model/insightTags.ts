@@ -1,3 +1,4 @@
+import { i18n } from "@/shared/i18n";
 import type { ForecastResponse } from "@/entities/forecast";
 
 export type InsightTag = {
@@ -6,19 +7,10 @@ export type InsightTag = {
   tone: "neutral" | "good" | "warning";
 };
 
-/** 1 предупреждение · 2 предупреждения · 5 предупреждений */
-function pluralWarnings(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return "предупреждение";
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "предупреждения";
-  return "предупреждений";
-}
-
 function generationLevel(average: number): string {
-  if (average >= 0.6) return "Высокая выработка";
-  if (average >= 0.3) return "Умеренная выработка";
-  return "Низкая выработка";
+  if (average >= 0.6) return i18n.t("High generation");
+  if (average >= 0.3) return i18n.t("Moderate generation");
+  return i18n.t("Low generation");
 }
 
 /** Short, factual tags derived from the agent's response (no invented signals). */
@@ -29,16 +21,18 @@ export function deriveInsightTags(forecast: ForecastResponse): InsightTag[] {
   }
 
   const recompute = forecast.agentSteps.find((step) => step.id === "recompute");
-  if (recompute?.status === "completed") tags.push({ key: "recompute", label: "Выполнен пересчёт", tone: "warning" });
-  else if (recompute?.status === "failed") tags.push({ key: "recompute", label: "Пересчёт не удался", tone: "warning" });
+  if (recompute?.status === "completed")
+    tags.push({ key: "recompute", label: i18n.t("Forecast recomputed"), tone: "warning" });
+  else if (recompute?.status === "failed")
+    tags.push({ key: "recompute", label: i18n.t("Recompute failed"), tone: "warning" });
   else if (recompute?.status === "skipped" && forecast.status === "completed")
-    tags.push({ key: "recompute", label: "Самопроверка пройдена", tone: "good" });
+    tags.push({ key: "recompute", label: i18n.t("Self-check passed"), tone: "good" });
 
   const warnings = forecast.warnings.length;
   tags.push(
     warnings === 0
-      ? { key: "warnings", label: "Аномалий нет", tone: "good" }
-      : { key: "warnings", label: `${warnings} ${pluralWarnings(warnings)}`, tone: "warning" },
+      ? { key: "warnings", label: i18n.t("No anomalies"), tone: "good" }
+      : { key: "warnings", label: i18n.t("warningCount", { count: warnings }), tone: "warning" },
   );
   return tags;
 }

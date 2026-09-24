@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/lib";
 
 import { SeriesMarker } from "./SeriesMarker";
@@ -15,8 +16,9 @@ type ChartLegendProps = {
 };
 
 export function ChartLegend({ items, className }: ChartLegendProps) {
+  const { t } = useTranslation();
   return (
-    <ul className={cn("flex flex-wrap items-center gap-x-7 gap-y-1", className)} aria-label="Легенда графика">
+    <ul className={cn("flex flex-wrap items-center gap-x-7 gap-y-1", className)} aria-label={t("Chart legend")}>
       {items.map((item) => (
         <li key={item.key} className="flex items-center gap-2 text-[13px] text-ink-muted">
           <SeriesMarker color={item.color} shape={item.shape} />

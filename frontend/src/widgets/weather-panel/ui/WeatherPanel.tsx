@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Cloud } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -9,8 +10,8 @@ import { Card, CardHeader, EmptyState, SegmentedControl, Skeleton, type SegmentO
 import { WeatherChart, type WeatherMetric } from "./WeatherChart";
 
 const TABS: readonly SegmentOption<WeatherMetric>[] = [
-  { value: "wind", label: "Ветер" },
-  { value: "temperature", label: "Температура" },
+  { value: "wind", label: "Wind" },
+  { value: "temperature", label: "Temperature" },
 ];
 
 type WeatherPanelProps = {
@@ -19,6 +20,7 @@ type WeatherPanelProps = {
 };
 
 export function WeatherPanel({ forecast, isLoading }: WeatherPanelProps) {
+  const { t } = useTranslation();
   const [metric, setMetric] = useState<WeatherMetric>("wind");
   const turbines = forecast?.turbines ?? [];
   const rows = useMemo(
@@ -31,15 +33,15 @@ export function WeatherPanel({ forecast, isLoading }: WeatherPanelProps) {
     <Card aria-labelledby="weather-title" className="flex h-full flex-col">
       <CardHeader
         titleId="weather-title"
-        title="Прогноз погоды"
-        description="Почасовые погодные условия на площадке"
+        title={t("Weather forecast")}
+        description={t("Hourly weather conditions at the site")}
         icon={<Cloud className="size-5" strokeWidth={1.4} aria-hidden />}
         action={
           <SegmentedControl
             value={metric}
-            options={TABS}
+            options={TABS.map((option) => ({ ...option, label: t(option.label) }))}
             onValueChange={setMetric}
-            ariaLabel="Погодный параметр"
+            ariaLabel={t("Weather variable")}
             variant="subtle"
             size="sm"
             className="w-auto"
@@ -63,8 +65,8 @@ export function WeatherPanel({ forecast, isLoading }: WeatherPanelProps) {
           <EmptyState
             className="min-h-[150px] py-4"
             icon={<Cloud className="size-6" strokeWidth={1.4} aria-hidden />}
-            title="Погода не загружена"
-            description="Во время запуска агент получает почасовые скорость ветра и температуру."
+            title={t("Weather not loaded")}
+            description={t("The agent fetches hourly wind speed and temperature during a run.")}
           />
         )}
       </div>

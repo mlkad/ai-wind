@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
 
@@ -19,6 +20,7 @@ type ForecastControlsProps = {
 };
 
 export function ForecastControls({ params, onParamsChange, onRun, isRunning, topRight }: ForecastControlsProps) {
+  const { t } = useTranslation();
   return (
     <section aria-labelledby="hero-title" className="relative -mx-4 sm:-mx-6">
       {/* Cinematic backdrop: fades into the canvas on the left (behind the headline) and at the bottom. */}
@@ -34,7 +36,7 @@ export function ForecastControls({ params, onParamsChange, onRun, isRunning, top
       <div className="relative px-4 pt-6 sm:px-6 lg:pt-7">
         <div className="flex items-start justify-between gap-6">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={baseTransition}>
-            <p className="eyebrow">ИИ для устойчивого завтра</p>
+            <p className="eyebrow">{t("AI for a sustainable tomorrow")}</p>
             <span aria-hidden className="mt-3 block h-px w-8 bg-line-strong" />
           </motion.div>
           {topRight ? <div className="hidden lg:block">{topRight}</div> : null}
@@ -46,31 +48,34 @@ export function ForecastControls({ params, onParamsChange, onRun, isRunning, top
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...baseTransition, delay: 0.08 }}
           >
-            <h1 id="hero-title" className="font-display text-[clamp(56px,4.3vw,100px)] leading-[1.02] font-[380] tracking-[-0.015em] text-ink">
-              Прогнозируем
+            <h1
+              id="hero-title"
+              className="font-display text-[clamp(56px,4.3vw,100px)] leading-[1.02] font-[380] tracking-[-0.015em] text-ink"
+            >
+              {t("Forecasting")}
               <br />
-              <span className="text-cream-gradient">чистое завтра</span>
+              <span className="text-cream-gradient">{t("a cleaner tomorrow")}</span>
             </h1>
             <p className="mt-5 max-w-[480px] text-[16px] leading-relaxed text-ink/80 2xl:text-[17px]">
-              Агентный ИИ для прогноза выработки ветровой энергии. От погоды к выводам за секунды.
+              {t("Agentic AI for wind power forecasting. From weather to insights in seconds.")}
             </p>
           </motion.div>
 
           <div className="hidden shrink-0 self-stretch flex-col justify-between pb-6 text-right xl:flex">
             <div>
-              <p className="text-[11px] tracking-[0.42em] text-ink/85 uppercase">Казахстан</p>
+              <p className="text-[11px] tracking-[0.42em] text-ink/85 uppercase">{t("Kazakhstan")}</p>
               <p className="mt-3 text-[9px] leading-[1.8] tracking-[0.3em] text-ink/80 uppercase">
-                Чистая энергия
+                {t("Clean energy")}
                 <br />
-                Светлое будущее
+                {t("Brighter future")}
               </p>
             </div>
             <p className="flex items-center justify-end gap-4 text-[9px] leading-[1.8] tracking-[0.3em] text-ink/80 uppercase [text-shadow:0_1px_8px_rgb(11_13_9/0.9)]">
               <span aria-hidden className="h-px w-8 bg-line-strong" />
               <span className="text-left">
-                Ветер открывает
+                {t("Wind brings")}
                 <br />
-                возможности
+                {t("possibility")}
               </span>
             </p>
           </div>

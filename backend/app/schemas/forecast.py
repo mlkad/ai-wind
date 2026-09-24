@@ -14,6 +14,7 @@ from app.schemas.agent import AgentStep
 
 
 class ForecastRequest(BaseModel):
+    language: Literal["en", "ru"] = "en"
     forecast_date: date = Field(examples=["2026-02-01"])
     horizon_hours: HorizonHours = Field(examples=[24])
     turbine_ids: list[TurbineId] = Field(min_length=1, examples=[[1, 2]])

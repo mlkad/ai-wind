@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Clock3 } from "lucide-react";
 import { useId } from "react";
 
@@ -6,7 +7,7 @@ import { Field, SegmentedControl, type SegmentOption } from "@/shared/ui";
 
 const OPTIONS: readonly SegmentOption<HorizonHours>[] = HORIZON_OPTIONS.map((hours) => ({
   value: hours,
-  label: `${hours} ч`,
+  label: String(hours),
 }));
 
 type HorizonFieldProps = {
@@ -16,12 +17,13 @@ type HorizonFieldProps = {
 };
 
 export function HorizonField({ value, onChange, disabled }: HorizonFieldProps) {
+  const { t } = useTranslation();
   const labelId = useId();
   return (
-    <Field label="Горизонт" labelId={labelId} icon={<Clock3 className="size-5" strokeWidth={1.4} />}>
+    <Field label={t("Horizon")} labelId={labelId} icon={<Clock3 className="size-5" strokeWidth={1.4} />}>
       <SegmentedControl
         value={value}
-        options={OPTIONS}
+        options={OPTIONS.map((option) => ({ ...option, label: t("{{count}} h", { count: option.value }) }))}
         onValueChange={onChange}
         ariaLabelledBy={labelId}
         disabled={disabled}

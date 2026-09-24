@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { WindScape } from "@/shared/ui";
 
 /** Atmospheric closing card of the dashboard grid. */
 export function BrandCard() {
+  const { t } = useTranslation();
   return (
     <div className="relative h-full min-h-[200px] overflow-hidden rounded-[18px] border border-line">
       <WindScape variant="card" className="absolute inset-0 h-full w-full" />
@@ -10,11 +12,11 @@ export function BrandCard() {
         <div className="flex-1" />
         <div>
           <p className="font-display text-[21px] leading-[1.2] text-ink">
-            Сила природы
+            {t("Nature’s power")}
             <br />
-            под управлением
+            {t("guided by")}
             <br />
-            ИИ.
+            {t("AI.")}
           </p>
           <span aria-hidden className="mt-4 block h-px w-8 bg-line-strong" />
         </div>

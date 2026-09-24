@@ -2,7 +2,7 @@
 
 import os
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends
 
@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.ml.mock_model import MockModelAdapter
 from app.ml.model_adapter import ModelAdapter
 from app.ml.real_model import RealModelAdapter
+from app.schemas.forecast import ForecastRequest
 from app.services.forecast_service import ForecastService
 from app.services.llm_explainer import ForecastExplainer, OpenAIExplainer
 from app.services.metrics_service import MetricsService
@@ -45,7 +46,7 @@ def get_weather_service() -> WeatherService:
 
 
 @lru_cache
-def get_explainer() -> ForecastExplainer | None:
+def get_explainer(language: Literal["en", "ru"] | None = None) -> ForecastExplainer | None:
     """OpenAI-written explanations when OPENAI_API_KEY is set; otherwise the agent uses its template."""
     settings = get_settings()
     if not settings.llm_enabled or settings.openai_api_key is None:
@@ -56,19 +57,24 @@ def get_explainer() -> ForecastExplainer | None:
     return OpenAIExplainer(
         model=settings.openai_model,
         timeout_s=settings.openai_timeout_s,
-        language=settings.explanation_language,
+        language=language or settings.explanation_language,
     )
 
 
 @lru_cache
-def get_forecast_service() -> ForecastService:
+def _get_forecast_service(language: Literal["en", "ru"]) -> ForecastService:
     agent = ForecastAgent(
         weather_service=get_weather_service(),
         model_adapter=get_model_adapter(),
-        explainer=get_explainer(),
-        explanation_language=get_settings().explanation_language,
+        explainer=get_explainer(language),
+        explanation_language=language,
     )
     return ForecastService(agent)
+
+
+def get_forecast_service(request: ForecastRequest) -> ForecastService:
+    # Separate immutable agents prevent concurrent EN/RU requests from sharing language state.
+    return _get_forecast_service(request.language)
 
 
 @lru_cache

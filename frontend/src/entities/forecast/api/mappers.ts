@@ -1,7 +1,13 @@
 import type { AgentStep } from "@/entities/agent";
 import { isTurbineId } from "@/entities/turbine";
 
-import type { ForecastPoint, ForecastRequest, ForecastResponse, ForecastSummary, TurbineForecast } from "../types/forecast";
+import type {
+  ForecastPoint,
+  ForecastRequest,
+  ForecastResponse,
+  ForecastSummary,
+  TurbineForecast,
+} from "../types/forecast";
 
 import type {
   AgentStepDto,
@@ -14,6 +20,7 @@ import type {
 
 export function mapForecastRequestToDto(request: ForecastRequest): ForecastRequestDto {
   return {
+    language: request.language ?? "en",
     forecast_date: request.forecastDate,
     horizon_hours: request.horizonHours,
     turbine_ids: request.turbineIds,

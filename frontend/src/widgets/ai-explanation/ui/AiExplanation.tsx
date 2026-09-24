@@ -1,6 +1,7 @@
+import { useTranslation } from "react-i18next";
 import { ArrowRight, Sparkles, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useId, useMemo, useState } from "react";
+import { useId, useState } from "react";
 
 import { WEATHER_SOURCE_LABELS, type ExplanationSource, type ForecastResponse } from "@/entities/forecast";
 import { baseTransition } from "@/shared/config";
@@ -16,7 +17,7 @@ type AiExplanationProps = {
 
 const SOURCE_LABELS: Record<ExplanationSource, string> = {
   llm: "LLM (OpenAI)",
-  template: "Шаблон (LLM выключен)",
+  template: "Template (LLM disabled)",
 };
 
 const TAG_TONES: Record<InsightTag["tone"], string> = {
@@ -26,15 +27,16 @@ const TAG_TONES: Record<InsightTag["tone"], string> = {
 };
 
 export function AiExplanation({ forecast, isLoading }: AiExplanationProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const detailsId = useId();
-  const tags = useMemo(() => (forecast ? deriveInsightTags(forecast) : []), [forecast]);
+  const tags = forecast ? deriveInsightTags(forecast) : [];
 
   return (
     <Card aria-labelledby="explanation-title" className="flex h-full flex-col">
       <CardHeader
         titleId="explanation-title"
-        title="Объяснение ИИ"
+        title={t("AI explanation")}
         icon={<Sparkles className="size-5" strokeWidth={1.4} aria-hidden />}
         className="mb-3"
         action={
@@ -44,7 +46,7 @@ export function AiExplanation({ forecast, isLoading }: AiExplanationProps) {
               onClick={() => setOpen((value) => !value)}
               aria-expanded={open}
               aria-controls={detailsId}
-              aria-label={open ? "Скрыть подробности" : "Показать подробности"}
+              aria-label={open ? t("Hide details") : t("Show details")}
               className="grid size-8 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-panel-soft hover:text-ink"
             >
               <ArrowRight className={cn("size-[18px] transition-transform", open && "rotate-90")} strokeWidth={1.5} />
@@ -71,7 +73,7 @@ export function AiExplanation({ forecast, isLoading }: AiExplanationProps) {
             {forecast.explanation}
           </motion.p>
 
-          <ul className="mt-auto flex flex-wrap gap-2 pt-4" aria-label="Ключевые выводы">
+          <ul className="mt-auto flex flex-wrap gap-2 pt-4" aria-label={t("Key insights")}>
             {tags.map((tag) => (
               <li key={tag.key} className={cn("rounded-full border px-3 py-1 text-[12px]", TAG_TONES[tag.tone])}>
                 {tag.label}
@@ -91,12 +93,12 @@ export function AiExplanation({ forecast, isLoading }: AiExplanationProps) {
               >
                 <div className="mt-4 space-y-3 border-t border-line pt-3">
                   {forecast.warnings.length > 0 ? (
-                    <ul className="space-y-1.5" aria-label="Предупреждения">
+                    <ul className="space-y-1.5" aria-label={t("Warnings")}>
                       {forecast.warnings.map((warning) => (
                         <li key={warning} className="flex gap-2 text-[12.5px] text-ink/85">
                           <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-gold" aria-hidden />
                           <span>
-                            <span className="sr-only">Предупреждение: </span>
+                            <span className="sr-only">{t("Warning:")}</span>
                             {warning}
                           </span>
                         </li>
@@ -104,15 +106,19 @@ export function AiExplanation({ forecast, isLoading }: AiExplanationProps) {
                     </ul>
                   ) : null}
                   <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[11.5px]">
-                    <dt className="text-ink-subtle">Автор текста</dt>
-                    <dd className="text-ink-muted">{SOURCE_LABELS[forecast.explanationSource ?? "template"]}</dd>
-                    <dt className="text-ink-subtle">Модель</dt>
-                    <dd className="font-mono text-[11px] break-all text-ink-muted">{forecast.modelVersion ?? "нет данных"}</dd>
-                    <dt className="text-ink-subtle">Погода</dt>
-                    <dd className="text-ink-muted">
-                      {forecast.weatherSource ? (WEATHER_SOURCE_LABELS[forecast.weatherSource] ?? forecast.weatherSource) : "нет данных"}
+                    <dt className="text-ink-subtle">{t("Text source")}</dt>
+                    <dd className="text-ink-muted">{t(SOURCE_LABELS[forecast.explanationSource ?? "template"])}</dd>
+                    <dt className="text-ink-subtle">{t("Model")}</dt>
+                    <dd className="font-mono text-[11px] break-all text-ink-muted">
+                      {forecast.modelVersion ?? t("not available")}
                     </dd>
-                    <dt className="text-ink-subtle">Сформировано</dt>
+                    <dt className="text-ink-subtle">{t("Weather")}</dt>
+                    <dd className="text-ink-muted">
+                      {forecast.weatherSource
+                        ? t(WEATHER_SOURCE_LABELS[forecast.weatherSource] ?? forecast.weatherSource)
+                        : t("not available")}
+                    </dd>
+                    <dt className="text-ink-subtle">{t("Generated")}</dt>
                     <dd className="text-ink-muted">{formatRelativeTime(forecast.generatedAt)}</dd>
                   </dl>
                 </div>
@@ -122,7 +128,9 @@ export function AiExplanation({ forecast, isLoading }: AiExplanationProps) {
         </>
       ) : (
         <p className="text-[13.5px] leading-relaxed text-ink-muted">
-          После запуска агент объяснит ожидаемую выработку, свяжет её с ветром, выделит окна низкой выработки и отметит эксплуатационные аномалии.
+          {t(
+            "Run the agent to explain expected generation, connect it to the wind, highlight low-output windows and flag operational anomalies.",
+          )}
         </p>
       )}
     </Card>

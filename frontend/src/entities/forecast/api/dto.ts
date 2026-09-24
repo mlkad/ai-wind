@@ -2,6 +2,7 @@
 import type { AgentStepId, AgentStepStatus } from "@/entities/agent";
 
 export type ForecastRequestDto = {
+  language?: "en" | "ru";
   forecast_date: string;
   horizon_hours: 24 | 48;
   turbine_ids: number[];

@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     openai_timeout_s: float = Field(default=10.0, gt=0)
-    # The dashboard is in Russian, so LLM explanations default to Russian.
+    # Default for CLI replay tools. The API uses the language selected in each request.
     explanation_language: Literal["en", "ru"] = "ru"
 
     @property

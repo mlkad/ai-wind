@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { CalendarDays } from "lucide-react";
 import { useId } from "react";
 
@@ -17,9 +18,10 @@ function clampToRange(value: string): string {
 }
 
 export function ForecastDateField({ value, onChange, disabled }: ForecastDateFieldProps) {
+  const { t } = useTranslation();
   const inputId = useId();
   return (
-    <Field label="Дата прогноза" htmlFor={inputId} icon={<CalendarDays className="size-5" strokeWidth={1.4} />}>
+    <Field label={t("Forecast date")} htmlFor={inputId} icon={<CalendarDays className="size-5" strokeWidth={1.4} />}>
       <DateInput
         id={inputId}
         value={value}

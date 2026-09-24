@@ -5,6 +5,7 @@ import type { IsoDate, IsoDateTime } from "@/shared/types";
 export type HorizonHours = 24 | 48;
 
 export type ForecastRequest = {
+  language?: "en" | "ru";
   forecastDate: IsoDate;
   horizonHours: HorizonHours;
   turbineIds: TurbineId[];

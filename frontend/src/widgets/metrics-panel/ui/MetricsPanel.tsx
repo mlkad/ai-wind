@@ -1,32 +1,35 @@
+import { useTranslation } from "react-i18next";
 import { ArrowRight, Database } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useId, useState } from "react";
 
 import { useModelMetrics, type ModelMetricsReport } from "@/entities/metrics";
 import { TURBINES } from "@/entities/turbine";
-import { formatShortDate } from "@/shared/lib";
+import { getLocale, i18n } from "@/shared/i18n";
+import { formatFixed, formatShortDate } from "@/shared/lib";
 import { Skeleton } from "@/shared/ui";
 import { SeriesMarker } from "@/shared/ui/chart";
 
 const COLUMNS = [
-  { key: "mae", label: "MAE", digits: 3, hint: "Средняя абсолютная ошибка: чем меньше, тем лучше" },
-  { key: "rmse", label: "RMSE", digits: 3, hint: "Среднеквадратичная ошибка: чем меньше, тем лучше" },
-  { key: "r2", label: "R²", digits: 2, hint: "Объяснённая дисперсия: чем ближе к 1, тем лучше" },
+  { key: "mae", label: "MAE", digits: 3, hint: "Mean absolute error: lower is better" },
+  { key: "rmse", label: "RMSE", digits: 3, hint: "Root mean squared error: lower is better" },
+  { key: "r2", label: "R²", digits: 2, hint: "Explained variance: closer to 1 is better" },
 ] as const;
 
 function caption(report: ModelMetricsReport | undefined): string {
   if (!report) return "";
-  return report.source === "holdout" ? "Отложенная выборка · наблюдённая погода" : "Демо-значения · mock-модель";
+  return report.source === "holdout" ? i18n.t("Holdout · observed weather") : i18n.t("Demo values · mock model");
 }
 
-// Russian wording of the evaluation caveat, keyed by the backend's evaluation kind.
+// Translation keys for evaluation caveats, indexed by the backend evaluation kind.
 const EVALUATION_NOTES: Record<string, string> = {
   observed_weather_proxy:
-    "Метрики модели мощности на отложенном периоде с наблюдённой погодой. Это не операционная точность: ошибка прогноза погоды в них не учтена.",
+    "Power-model metrics on a holdout period using observed weather. These do not measure operational accuracy because weather forecast errors are not included.",
 };
 
 /** Model Metrics section (rendered inside the right-column card). */
 export function ModelMetrics() {
+  const { t } = useTranslation();
   const { data, isPending, isError, error } = useModelMetrics();
   const [showDetails, setShowDetails] = useState(false);
   const detailsId = useId();
@@ -36,7 +39,7 @@ export function ModelMetrics() {
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 id="metrics-title" className="flex items-center gap-3 font-display text-[19px] text-ink">
           <Database className="size-5 text-cream/80" strokeWidth={1.4} aria-hidden />
-          Метрики модели
+          {t("Model metrics")}
         </h2>
         <button
           type="button"
@@ -45,7 +48,7 @@ export function ModelMetrics() {
           aria-controls={detailsId}
           className="flex h-7 items-center gap-1.5 rounded-lg border border-line px-2.5 text-[11.5px] text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
         >
-          Детали
+          {t("Details")}
           <ArrowRight className={`size-3 transition-transform ${showDetails ? "rotate-90" : ""}`} aria-hidden />
         </button>
       </div>
@@ -57,19 +60,20 @@ export function ModelMetrics() {
         </div>
       ) : isError ? (
         <p role="alert" className="text-[12.5px] text-ink-muted">
-          Метрики недоступны: {error.message}
+          {t("Metrics unavailable:")}
+          {error.message}
         </p>
       ) : (
         <>
           <table className="w-full text-[12.5px]">
-            <caption className="sr-only">Метрики ошибки модели по турбинам</caption>
+            <caption className="sr-only">{t("Model error metrics by turbine")}</caption>
             <thead>
               <tr className="text-[11.5px] text-ink-subtle">
                 <th scope="col" className="pb-1.5 text-left font-normal">
-                  Турбина
+                  {t("Turbine")}
                 </th>
                 {COLUMNS.map((column) => (
-                  <th key={column.key} scope="col" title={column.hint} className="pb-1.5 text-right font-normal">
+                  <th key={column.key} scope="col" title={t(column.hint)} className="pb-1.5 text-right font-normal">
                     {column.label}
                   </th>
                 ))}
@@ -83,12 +87,12 @@ export function ModelMetrics() {
                     <th scope="row" className="py-1.5 text-left font-normal text-ink">
                       <span className="flex items-center gap-2">
                         <SeriesMarker color={turbine.color} shape={turbine.marker} className="size-2" />
-                        {turbine.name}
+                        {t(turbine.name)}
                       </span>
                     </th>
                     {COLUMNS.map((column) => (
                       <td key={column.key} className="py-1.5 text-right text-ink tabular-nums">
-                        {model[column.key].toFixed(column.digits)}
+                        {formatFixed(model[column.key], column.digits)}
                       </td>
                     ))}
                   </tr>
@@ -112,19 +116,22 @@ export function ModelMetrics() {
                   {data.evaluation ? (
                     <>
                       <p>
-                        Отложенный период: {formatShortDate(data.evaluation.periodStart)} – {formatShortDate(data.evaluation.periodEnd)}
-                        {data.models[0]?.n != null ? ` · n = ${data.models.map((m) => m.n?.toLocaleString("ru-RU")).join(" / ")}` : ""}
+                        {t("Holdout period:")}
+                        {formatShortDate(data.evaluation.periodStart)} – {formatShortDate(data.evaluation.periodEnd)}
+                        {data.models[0]?.n != null
+                          ? ` · n = ${data.models.map((m) => m.n?.toLocaleString(getLocale())).join(" / ")}`
+                          : ""}
                       </p>
-                      <p>{EVALUATION_NOTES[data.evaluation.kind] ?? data.evaluation.note}</p>
+                      <p>{t(EVALUATION_NOTES[data.evaluation.kind] ?? data.evaluation.note)}</p>
                     </>
                   ) : (
-                    <p>Демо-значения. Запустите сервер с MODEL_ADAPTER=real, чтобы увидеть метрики CatBoost на отложенной выборке.</p>
+                    <p>{t("Demo values. Run the server with MODEL_ADAPTER=real to see CatBoost holdout metrics.")}</p>
                   )}
                   <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-ink-subtle">
                     {COLUMNS.map((column) => (
                       <div key={column.key} className="contents">
                         <dt className="text-ink-muted">{column.label}</dt>
-                        <dd>{column.hint}</dd>
+                        <dd>{t(column.hint)}</dd>
                       </div>
                     ))}
                   </dl>

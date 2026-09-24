@@ -1,3 +1,5 @@
+import { i18n } from "@/shared/i18n";
+import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 
 import { AGENT_PIPELINE, stepTitle, type AgentStep } from "@/entities/agent";
@@ -7,11 +9,11 @@ import { cn, formatDuration } from "@/shared/lib";
 import { StepStatusIcon } from "./StepStatusIcon";
 
 const STATUS_LABELS: Record<AgentStep["status"], string> = {
-  pending: "Ожидает",
-  running: "Выполняется",
-  completed: "Выполнено",
-  failed: "Ошибка",
-  skipped: "Пропущено",
+  pending: "Pending",
+  running: "Running",
+  completed: "Completed",
+  failed: "Failed",
+  skipped: "Skipped",
 };
 
 type AgentStepItemProps = {
@@ -23,12 +25,13 @@ type AgentStepItemProps = {
 function describe(step: AgentStep): string {
   // Unexecuted steps show the plan; executed steps show the backend's real message.
   if (step.status === "pending" || step.status === "running") {
-    return AGENT_PIPELINE.find((stage) => stage.id === step.id)?.description ?? "";
+    return i18n.t(AGENT_PIPELINE.find((stage) => stage.id === step.id)?.description ?? "");
   }
   return step.message;
 }
 
 export function AgentStepItem({ step, index, isLast }: AgentStepItemProps) {
+  const { t } = useTranslation();
   const isMuted = step.status === "pending" || step.status === "skipped";
   const description = describe(step);
 
@@ -56,10 +59,12 @@ export function AgentStepItem({ step, index, isLast }: AgentStepItemProps) {
         <div className="flex items-baseline justify-between gap-3">
           <p className={cn("text-[13.5px] leading-snug", isMuted ? "text-ink-muted" : "text-ink")}>
             {stepTitle(step.id, step.title)}
-            <span className="sr-only">, {STATUS_LABELS[step.status]}</span>
+            <span className="sr-only">, {t(STATUS_LABELS[step.status])}</span>
           </p>
           {step.durationMs !== undefined ? (
-            <span className="shrink-0 text-[11.5px] text-ink-muted tabular-nums">{formatDuration(step.durationMs)}</span>
+            <span className="shrink-0 text-[11.5px] text-ink-muted tabular-nums">
+              {formatDuration(step.durationMs)}
+            </span>
           ) : null}
         </div>
         <p

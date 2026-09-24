@@ -8,7 +8,7 @@ export const HORIZON_OPTIONS: readonly HorizonHours[] = [24, 48];
 export const DEFAULT_HORIZON: HorizonHours = 24;
 
 export const WEATHER_SOURCE_LABELS: Record<string, string> = {
-  mock: "Синтетическая демо-погода",
-  open_meteo: "Open-Meteo, архив Single Runs",
-  archive: "Open-Meteo, сохранённый архив Single Runs",
+  mock: "Synthetic demo weather",
+  open_meteo: "Open-Meteo, Single Runs archive",
+  archive: "Open-Meteo, saved Single Runs archive",
 };

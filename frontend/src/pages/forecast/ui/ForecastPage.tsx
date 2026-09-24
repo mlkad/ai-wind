@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import { getLanguage, type Language } from "@/shared/i18n";
 import { useEffect, useRef } from "react";
 
 import { toForecastRequest, useRunForecast } from "@/entities/forecast";
@@ -15,20 +17,24 @@ import { WeatherPanel } from "@/widgets/weather-panel";
 import { useForecastParams } from "../model/useForecastParams";
 
 export function ForecastPage() {
+  useTranslation();
+  const language = getLanguage();
   const { params, updateParams } = useForecastParams();
   const runForecast = useRunForecast();
 
-  const forecast = runForecast.data;
-  const isRunning = runForecast.isPending;
-  const handleRun = () => runForecast.mutate(toForecastRequest(params));
+  const hasCurrentLanguage = runForecast.variables?.language === language;
+  const forecast = hasCurrentLanguage ? runForecast.data : undefined;
+  const isRunning = !hasCurrentLanguage || runForecast.isPending;
+  const handleRun = () => runForecast.mutate({ ...toForecastRequest(params), language });
 
-  // Open on a real result: run the agent once with the default parameters on first visit.
-  const didAutoRun = useRef(false);
+  // A language change reruns the last submitted parameters, not unsubmitted control edits.
+  // Mutation observers only expose the latest run, so late responses cannot restore old text.
+  const lastLanguage = useRef<Language | null>(null);
   useEffect(() => {
-    if (didAutoRun.current) return;
-    didAutoRun.current = true;
-    runForecast.mutate(toForecastRequest(params));
-  }, [params, runForecast]);
+    if (lastLanguage.current === language) return;
+    lastLanguage.current = language;
+    runForecast.mutate({ ...(runForecast.variables ?? toForecastRequest(params)), language });
+  }, [language, params, runForecast]);
 
   return (
     <div className="mx-auto max-w-[1760px]">
@@ -46,7 +52,11 @@ export function ForecastPage() {
           <PowerForecastChart forecast={forecast} isLoading={isRunning} />
         </Reveal>
         <Reveal className="3xl:col-span-3" delay={0.26}>
-          <AgentActivity forecast={forecast} isRunning={isRunning} error={runForecast.error} />
+          <AgentActivity
+            forecast={forecast}
+            isRunning={isRunning}
+            error={hasCurrentLanguage ? runForecast.error : null}
+          />
         </Reveal>
         <Reveal className="3xl:col-span-3" delay={0.3}>
           <Card className="h-full space-y-6">

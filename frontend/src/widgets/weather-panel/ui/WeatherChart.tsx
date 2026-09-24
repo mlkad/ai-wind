@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
 import {
   Bar,
@@ -14,15 +15,15 @@ import {
 
 import { hourlyTicks, type SiteRow } from "@/entities/forecast";
 import { palette } from "@/shared/config";
-import { formatDayHour, formatTimeTick } from "@/shared/lib";
+import { formatDayHour, formatFixed, formatTimeTick } from "@/shared/lib";
 import { ChartTooltipCard } from "@/shared/ui/chart";
 
 export type WeatherMetric = "wind" | "temperature";
 
 const AXIS_TICK = { fill: palette.inkMuted, fontSize: 11.5 };
 const META: Record<WeatherMetric, { label: string; unit: string }> = {
-  wind: { label: "Скорость ветра", unit: "m/s" },
-  temperature: { label: "Температура", unit: "°C" },
+  wind: { label: "Wind speed", unit: "m/s" },
+  temperature: { label: "Temperature", unit: "°C" },
 };
 
 type WeatherChartProps = {
@@ -36,7 +37,11 @@ function WeatherTooltip({
   label,
   byTimestamp,
   metric,
-}: Pick<TooltipContentProps<number, string>, "active" | "label"> & { byTimestamp: Map<string, number>; metric: WeatherMetric }) {
+}: Pick<TooltipContentProps<number, string>, "active" | "label"> & {
+  byTimestamp: Map<string, number>;
+  metric: WeatherMetric;
+}) {
+  const { t } = useTranslation();
   if (!active || typeof label !== "string") return null;
   const value = byTimestamp.get(label);
   if (value === undefined) return null;
@@ -44,15 +49,28 @@ function WeatherTooltip({
   return (
     <ChartTooltipCard
       title={formatDayHour(label)}
-      items={[{ key: metric, label: name, color: metric === "wind" ? palette.barActive : palette.cream, shape: "dot", value: `${value.toFixed(1)} ${unit}` }]}
+      items={[
+        {
+          key: metric,
+          label: t(name),
+          color: metric === "wind" ? palette.barActive : palette.cream,
+          shape: "dot",
+          value: `${formatFixed(value, 1)} ${unit}`,
+        },
+      ]}
     />
   );
 }
 
 export function WeatherChart({ metric, rows, horizonHours }: WeatherChartProps) {
+  const { t } = useTranslation();
   const byTimestamp = useMemo(() => new Map(rows.map((row) => [row.timestamp, row.value])), [rows]);
   const ticks = useMemo(
-    () => hourlyTicks(rows.map((row) => ({ timestamp: row.timestamp })), horizonHours > 24 ? 8 : 4),
+    () =>
+      hourlyTicks(
+        rows.map((row) => ({ timestamp: row.timestamp })),
+        horizonHours > 24 ? 8 : 4,
+      ),
     [rows, horizonHours],
   );
   const common = {
@@ -74,7 +92,9 @@ export function WeatherChart({ metric, rows, horizonHours }: WeatherChartProps) 
   const tooltip = (
     <Tooltip
       cursor={metric === "wind" ? false : { stroke: palette.axis, strokeWidth: 1 }}
-      content={(props) => <WeatherTooltip active={props.active} label={props.label} byTimestamp={byTimestamp} metric={metric} />}
+      content={(props) => (
+        <WeatherTooltip active={props.active} label={props.label} byTimestamp={byTimestamp} metric={metric} />
+      )}
     />
   );
 
@@ -88,7 +108,7 @@ export function WeatherChart({ metric, rows, horizonHours }: WeatherChartProps) 
           {tooltip}
           <Bar
             dataKey="value"
-            name="Скорость ветра"
+            name={t("Wind speed")}
             fill={palette.bar}
             radius={[2, 2, 0, 0]}
             activeBar={{ fill: palette.barActive }}
@@ -99,12 +119,20 @@ export function WeatherChart({ metric, rows, horizonHours }: WeatherChartProps) 
         <LineChart {...common}>
           <CartesianGrid vertical={false} stroke={palette.grid} />
           {xAxis}
-          <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={40} tickCount={3} domain={["dataMin - 2", "dataMax + 2"]} allowDecimals={false} />
+          <YAxis
+            tick={AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            width={40}
+            tickCount={3}
+            domain={["dataMin - 2", "dataMax + 2"]}
+            allowDecimals={false}
+          />
           {tooltip}
           <Line
             type="monotone"
             dataKey="value"
-            name="Температура"
+            name={t("Temperature")}
             stroke={palette.cream}
             strokeWidth={1.8}
             dot={false}

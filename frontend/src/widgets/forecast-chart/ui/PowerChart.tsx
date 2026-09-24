@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
 import {
   Area,
@@ -34,6 +35,7 @@ function PowerTooltip({
   rowsByTimestamp: Map<string, ChartRow>;
   turbineIds: TurbineId[];
 }) {
+  const { t } = useTranslation();
   if (!active || typeof label !== "string") return null;
   const row = rowsByTimestamp.get(label);
   if (!row) return null;
@@ -41,12 +43,21 @@ function PowerTooltip({
     const value = row[seriesKey(id)];
     if (value === undefined) return [];
     const turbine = TURBINES[id];
-    return [{ key: turbine.name, label: turbine.name, color: turbine.color, shape: turbine.marker, value: formatFixed(value, 2) }];
+    return [
+      {
+        key: turbine.name,
+        label: t(turbine.name),
+        color: turbine.color,
+        shape: turbine.marker,
+        value: formatFixed(value, 2),
+      },
+    ];
   });
   return <ChartTooltipCard title={formatDayHour(label)} items={items} />;
 }
 
 export function PowerChart({ rows, turbineIds, horizonHours }: PowerChartProps) {
+  const { t } = useTranslation();
   const rowsByTimestamp = useMemo(() => new Map(rows.map((row) => [row.timestamp, row])), [rows]);
   const ticks = useMemo(() => hourlyTicks(rows, horizonHours > 24 ? 8 : 4), [rows, horizonHours]);
   const showDots = rows.length <= 24;
@@ -77,7 +88,7 @@ export function PowerChart({ rows, turbineIds, horizonHours }: PowerChartProps) 
           domain={[0, 1]}
           ticks={Y_TICKS}
           allowDataOverflow
-          tickFormatter={(value: number) => value.toFixed(1)}
+          tickFormatter={(value: number) => formatFixed(value, 1)}
           tick={AXIS_TICK}
           tickLine={false}
           axisLine={{ stroke: palette.axis }}
@@ -86,7 +97,12 @@ export function PowerChart({ rows, turbineIds, horizonHours }: PowerChartProps) 
         <Tooltip
           cursor={{ stroke: palette.axis, strokeWidth: 1 }}
           content={(props) => (
-            <PowerTooltip active={props.active} label={props.label} rowsByTimestamp={rowsByTimestamp} turbineIds={turbineIds} />
+            <PowerTooltip
+              active={props.active}
+              label={props.label}
+              rowsByTimestamp={rowsByTimestamp}
+              turbineIds={turbineIds}
+            />
           )}
         />
         {turbineIds.map((id) => {
@@ -97,12 +113,21 @@ export function PowerChart({ rows, turbineIds, horizonHours }: PowerChartProps) 
               key={id}
               type="monotone"
               dataKey={seriesKey(id)}
-              name={turbine.name}
+              name={t(turbine.name)}
               stroke={turbine.color}
               strokeWidth={1.8}
               fill={`url(#power-fill-${id})`}
-              dot={showDots ? { r: 2.6, strokeWidth: 1.4, stroke: turbine.color, fill: filled ? turbine.color : palette.surface } : false}
-              activeDot={{ r: 4.5, strokeWidth: 1.6, stroke: turbine.color, fill: filled ? turbine.color : palette.surface }}
+              dot={
+                showDots
+                  ? { r: 2.6, strokeWidth: 1.4, stroke: turbine.color, fill: filled ? turbine.color : palette.surface }
+                  : false
+              }
+              activeDot={{
+                r: 4.5,
+                strokeWidth: 1.6,
+                stroke: turbine.color,
+                fill: filled ? turbine.color : palette.surface,
+              }}
               animationDuration={900}
               animationEasing="ease-out"
             />

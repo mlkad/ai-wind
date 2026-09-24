@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Activity, Sparkle } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -13,9 +14,9 @@ import { PowerChart } from "./PowerChart";
 type SeriesFilter = "1" | "2" | "both";
 
 const FILTER_OPTIONS: readonly SegmentOption<SeriesFilter>[] = [
-  { value: "1", label: "Турбина 1" },
-  { value: "2", label: "Турбина 2" },
-  { value: "both", label: "Обе" },
+  { value: "1", label: "Turbine 1" },
+  { value: "2", label: "Turbine 2" },
+  { value: "both", label: "Both" },
 ];
 
 type PowerForecastChartProps = {
@@ -24,6 +25,7 @@ type PowerForecastChartProps = {
 };
 
 export function PowerForecastChart({ forecast, isLoading }: PowerForecastChartProps) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<SeriesFilter>("both");
   const turbines = forecast?.turbines ?? [];
   const rows = useMemo(() => buildChartRows(turbines, "predictedPower"), [turbines]);
@@ -37,16 +39,16 @@ export function PowerForecastChart({ forecast, isLoading }: PowerForecastChartPr
     <Card aria-labelledby="power-title" active={isLoading} className="flex h-full flex-col">
       <CardHeader
         titleId="power-title"
-        title="Прогноз выработки"
-        description="Нормированная активная мощность по турбинам"
+        title={t("Power forecast")}
+        description={t("Normalized active power by turbine")}
         icon={<Sparkle className="size-5" strokeWidth={1.4} aria-hidden />}
         action={
           available.length > 1 ? (
             <SegmentedControl
               value={filter}
-              options={FILTER_OPTIONS}
+              options={FILTER_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))}
               onValueChange={setFilter}
-              ariaLabel="Показанные турбины"
+              ariaLabel={t("Visible turbines")}
               variant="subtle"
               size="sm"
               className="w-auto"
@@ -70,11 +72,11 @@ export function PowerForecastChart({ forecast, isLoading }: PowerForecastChartPr
         ) : (
           <EmptyState
             icon={<Activity className="size-6" strokeWidth={1.4} aria-hidden />}
-            title={forecast?.status === "failed" ? "Прогноз не построен" : "Прогноза пока нет"}
+            title={forecast?.status === "failed" ? t("Forecast failed") : t("No forecast yet")}
             description={
               forecast?.status === "failed"
-                ? "Агент остановился до построения прогноза. Подробности в блоке «Работа агента»."
-                : "Выберите дату, турбины и горизонт, затем запустите агента."
+                ? t("The agent stopped before producing a forecast. See Agent activity for details.")
+                : t("Choose a date, turbines and horizon, then run the agent.")
             }
           />
         )}
@@ -84,7 +86,7 @@ export function PowerForecastChart({ forecast, isLoading }: PowerForecastChartPr
           className="mt-3 justify-center"
           items={turbineIds.map((id) => ({
             key: String(id),
-            label: TURBINES[id].name,
+            label: t(TURBINES[id].name),
             color: TURBINES[id].color,
             shape: TURBINES[id].marker,
           }))}

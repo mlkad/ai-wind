@@ -1,3 +1,4 @@
+import { i18n } from "@/shared/i18n";
 import { API_BASE_URL, API_TIMEOUT_MS } from "./config";
 
 export class ApiError extends Error {
@@ -18,9 +19,7 @@ function extractErrorMessage(body: unknown, fallback: string): string {
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
     const messages = detail
-      .map((item: unknown) =>
-        typeof item === "object" && item !== null && "msg" in item ? String(item.msg) : null,
-      )
+      .map((item: unknown) => (typeof item === "object" && item !== null && "msg" in item ? String(item.msg) : null))
       .filter((message): message is string => message !== null);
     if (messages.length > 0) return messages.join("; ");
   }
@@ -59,14 +58,17 @@ export async function apiRequest<T>(path: string, { method = "GET", body, signal
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "TimeoutError") {
-      throw new ApiError(0, "Сервер WindAI не ответил вовремя. Попробуйте ещё раз.");
+      throw new ApiError(0, i18n.t("The WindAI server did not respond in time. Please try again."));
     }
-    throw new ApiError(0, `Не удаётся подключиться к серверу WindAI (${API_BASE_URL}). Он запущен?`);
+    throw new ApiError(0, i18n.t("Cannot connect to the WindAI server. Please try again."));
   }
 
   const payload = await readJson(response);
   if (!response.ok) {
-    throw new ApiError(response.status, extractErrorMessage(payload, `Запрос завершился с ошибкой ${response.status}.`));
+    throw new ApiError(
+      response.status,
+      extractErrorMessage(payload, i18n.t("Request failed ({{status}}).", { status: response.status })),
+    );
   }
   return payload as T;
 }

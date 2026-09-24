@@ -1,8 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { ChartColumn, SunMedium } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { ForecastResponse } from "@/entities/forecast";
-import { formatDay, formatHour } from "@/shared/lib";
+import { formatDay, formatFixed, formatHour } from "@/shared/lib";
 import { AnimatedNumber, Skeleton } from "@/shared/ui";
 
 type ForecastSummaryProps = {
@@ -10,7 +11,7 @@ type ForecastSummaryProps = {
   isLoading: boolean;
 };
 
-const formatPower = (value: number) => value.toFixed(2);
+const formatPower = (value: number) => formatFixed(value, 2);
 
 function Row({ label, value, extra }: { label: string; value: ReactNode; extra?: ReactNode }) {
   return (
@@ -24,6 +25,7 @@ function Row({ label, value, extra }: { label: string; value: ReactNode; extra?:
 
 /** Forecast Summary section (rendered inside the right-column card). */
 export function ForecastSummary({ forecast, isLoading }: ForecastSummaryProps) {
+  const { t } = useTranslation();
   const summary = forecast?.summary ?? null;
   const placeholder = isLoading ? <Skeleton className="h-4 w-12" /> : "…";
 
@@ -31,22 +33,26 @@ export function ForecastSummary({ forecast, isLoading }: ForecastSummaryProps) {
     <section aria-labelledby="summary-title">
       <h2 id="summary-title" className="mb-3.5 flex items-center gap-3 font-display text-[19px] text-ink">
         <ChartColumn className="size-5 text-cream/80" strokeWidth={1.4} aria-hidden />
-        Сводка прогноза
+        {t("Forecast summary")}
       </h2>
       <dl className="field rounded-[12px]">
         <Row
-          label="Средняя мощность"
+          label={t("Average power")}
           value={summary ? <AnimatedNumber value={summary.averagePower} format={formatPower} /> : placeholder}
           extra={
             summary ? (
-              <span className="rounded-md bg-sage/[0.12] px-1.5 py-0.5 text-[10.5px] text-sage tabular-nums" title="Доля от номинальной мощности">
-                {Math.round(summary.averagePower * 100)}% ном.
+              <span
+                className="rounded-md bg-sage/[0.12] px-1.5 py-0.5 text-[10.5px] text-sage tabular-nums"
+                title={t("Share of rated capacity")}
+              >
+                {Math.round(summary.averagePower * 100)}
+                {t("% rated")}
               </span>
             ) : null
           }
         />
         <Row
-          label="Пиковый час"
+          label={t("Peak hour")}
           value={
             summary ? (
               <span>
@@ -59,8 +65,14 @@ export function ForecastSummary({ forecast, isLoading }: ForecastSummaryProps) {
           }
           extra={<SunMedium className="size-[18px] text-cream/80" strokeWidth={1.4} aria-hidden />}
         />
-        <Row label="Максимум" value={summary ? <AnimatedNumber value={summary.maxPower} format={formatPower} /> : placeholder} />
-        <Row label="Минимум" value={summary ? <AnimatedNumber value={summary.minPower} format={formatPower} /> : placeholder} />
+        <Row
+          label={t("Maximum")}
+          value={summary ? <AnimatedNumber value={summary.maxPower} format={formatPower} /> : placeholder}
+        />
+        <Row
+          label={t("Minimum")}
+          value={summary ? <AnimatedNumber value={summary.minPower} format={formatPower} /> : placeholder}
+        />
       </dl>
     </section>
   );

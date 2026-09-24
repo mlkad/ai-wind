@@ -1,59 +1,62 @@
-const LOCALE = "ru-RU";
+import { getLocale, i18n } from "@/shared/i18n";
 
-const timeFormatter = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit", hour12: false });
-const dayFormatter = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short" });
-const longDateFormatter = new Intl.DateTimeFormat(LOCALE, {
-  weekday: "short",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
-
-/** Backend timestamps are naive wall-clock ISO strings; parsing without a zone keeps them local. */
+/** Backend timestamps are wall-clock ISO strings; no site-timezone conversion is applied. */
 export function parseTimestamp(value: string): Date {
   return new Date(value);
 }
 
 export function formatHour(value: string): string {
-  return timeFormatter.format(parseTimestamp(value));
+  return new Intl.DateTimeFormat(getLocale(), { hour: "2-digit", minute: "2-digit", hour12: false }).format(
+    parseTimestamp(value),
+  );
 }
 
 export function formatDay(value: string): string {
-  return dayFormatter.format(parseTimestamp(value));
+  return new Intl.DateTimeFormat(getLocale(), { day: "numeric", month: "short" }).format(parseTimestamp(value));
 }
 
 export function formatDayHour(value: string): string {
   return `${formatDay(value)}, ${formatHour(value)}`;
 }
 
-const shortDateFormatter = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short", year: "numeric" });
-
-/** "2025-12-01" → "1 дек. 2025 г." (parsed as a local calendar date, no timezone shift). */
+/** Parse calendar dates locally to avoid changing the forecast date across timezones. */
 export function formatShortDate(isoDate: string): string {
-  return shortDateFormatter.format(new Date(`${isoDate}T00:00:00`));
+  return new Intl.DateTimeFormat(getLocale(), { day: "numeric", month: "short", year: "numeric" }).format(
+    new Date(`${isoDate}T00:00:00`),
+  );
 }
 
 export function formatLongDate(isoDate: string): string {
-  return longDateFormatter.format(new Date(`${isoDate}T00:00:00`));
+  return new Intl.DateTimeFormat(getLocale(), {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${isoDate}T00:00:00`));
 }
 
-/** Normalized power 0..1 → "57%". */
 export function formatPercent(value: number, fractionDigits = 0): string {
-  return `${(value * 100).toFixed(fractionDigits)}%`;
+  return `${formatFixed(value * 100, fractionDigits)}%`;
 }
 
 export function formatFixed(value: number, fractionDigits = 2): string {
-  return value.toFixed(fractionDigits);
+  return value.toLocaleString(getLocale(), {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
 }
 
 export function formatDuration(ms: number): string {
-  return ms < 1000 ? `${ms} мс` : `${(ms / 1000).toFixed(2).replace(".", ",")} с`;
+  return ms < 1000
+    ? i18n.t("{{value}} ms", { value: ms })
+    : i18n.t("{{value}} s", { value: formatFixed(ms / 1000, 2) });
 }
 
 export function formatRelativeTime(isoDateTime: string, now: Date = new Date()): string {
   const seconds = Math.round((now.getTime() - new Date(isoDateTime).getTime()) / 1000);
-  if (seconds < 10) return "только что";
-  if (seconds < 60) return `${seconds} с назад`;
+  if (seconds < 10) return i18n.t("just now");
+  const formatter = new Intl.RelativeTimeFormat(getLocale(), { numeric: "auto" });
+  if (seconds < 60) return formatter.format(-seconds, "second");
   const minutes = Math.round(seconds / 60);
-  return minutes < 60 ? `${minutes} мин назад` : new Date(isoDateTime).toLocaleString(LOCALE);
+  return minutes < 60 ? formatter.format(-minutes, "minute") : new Date(isoDateTime).toLocaleString(getLocale());
 }
