@@ -1,108 +1,114 @@
-# WindAI — прогнозируем чистое завтра
+# WindAI — Wind Power Forecasting
 
-**Сегодня ветер есть. А сколько электричества он даст завтра?** WindAI помогает ответить на этот вопрос заранее: показывает ожидаемую мощность двух ветровых турбин на **24 или 48 часов** и объясняет, когда ждать роста или спада.
+**An interactive dashboard that forecasts wind turbine output and explains the result.** WindAI combines trained CatBoost models, archived weather forecasts and a FastAPI agent pipeline to estimate hourly power for two turbines in Kazakhstan over a **24- or 48-hour horizon**.
 
-Это помогает диспетчеру планировать работу станции и заранее замечать часы, когда энергии может не хватать. Проект команды **SYNC** для **HackAlemAI**.
+The project explores how a station operator could identify generation peaks, low-output periods and unusual conditions before planning the next day's operations.
 
-## Что получает пользователь
+**This version is a historical forecasting demo:** select a forecast date between **January 31 and February 28, 2026**. It replays forecasts using weather information available at the selected time. Current-date forecasting is not enabled.
 
-Выбирает дату и турбины, нажимает **«Запустить агента»** — и видит результат на одном экране:
+[![WindAI English dashboard with a turbine power forecast and EN/RU language switch](docs/images/windai-dashboard.png)](docs/images/windai-dashboard.png)
 
-[![Экран WindAI: график мощности двух турбин, погода, ход расчёта и объяснение](docs/images/windai-dashboard.png)](docs/images/windai-dashboard.png)
+*The English dashboard showing a 24-hour forecast for both turbines. Use the EN/RU switch to change the language; your preference is saved.*
 
-- **Когда будет больше и меньше энергии** — на почасовом графике каждой турбины.
-- **Главные числа** — средняя мощность и время ожидаемого пика.
-- **Почему меняется прогноз** — погода и объяснение простыми словами.
-- **На что обратить внимание** — предупреждения и результаты проверок агента.
+## What you can do
 
-**Пример на экране:** прогноз на 31 января, обе турбины, горизонт 24 часа. Утром ожидается пик, к вечеру выработка снижается почти до нуля. Средняя мощность за сутки составляет около **44% от номинальной**, то есть от мощности, на которую рассчитана турбина. Это показатель работы станции, а не процент точности ИИ. На графике `1` означает 100% номинальной мощности.
+- **Compare turbines:** view hourly power forecasts for either turbine or both together.
+- **Inspect the weather:** explore wind speed and temperature alongside expected output.
+- **See the key numbers:** average power, minimum, maximum and peak hour.
+- **Follow the agent:** inspect each pipeline step, its status, message and execution time.
+- **Read an explanation:** understand expected generation, low-output windows and warnings in English or Russian.
+- **Review model quality:** see holdout metrics and the conditions under which they were measured.
 
-*Скриншот можно увеличить нажатием. На нём видны завершённый цикл агента, метрики модели и русское объяснение OpenAI. Метрики относятся к отложенной выборке с наблюдённой погодой; условия проверки приведены ниже.*
+Power is normalized to each turbine's rated capacity: **`0.5` means 50% of rated power**, not 50% prediction accuracy. The charts do not report output in megawatts.
 
-## Что мы разработали
+## How it works
 
-**В основе прогноза — ИИ, обученный на реальных измерениях двух турбин.** Для каждой турбины мы обучили отдельную модель CatBoost: она изучила, как ветер и температура связаны с мощностью станции.
+The React dashboard sends a forecast request to FastAPI. The agent then runs this pipeline:
 
-| Работа команды | Масштаб |
+```text
+Fetch weather → Validate weather → Prepare model inputs → Run CatBoost
+    → Validate predictions → Analyze results → Recompute if needed → Explain
+```
+
+The weather service retrieves archived **Open-Meteo Single Runs** forecasts or reads the bundled archive. Each turbine has its own trained CatBoost model; earlier model snapshots support dates before the main models' training cutoff.
+
+The agent checks missing values, hourly continuity, physical ranges and consistency between wind and predicted power. Updated weather inputs, clipped predictions or substantial physical inconsistencies can trigger **one recomputation**. If that retry fails, the original validated forecast is retained with a warning.
+
+This orchestration is implemented in Python. **CatBoost produces the numerical forecast.** An optional OpenAI call explains facts already calculated by the pipeline. Without an API key, a deterministic template generates the explanation; the power predictions still come from the real trained models.
+
+## Model evaluation
+
+Model selection used chronological validation periods. The final holdout evaluation covered **December 2025 through January 2026**, using models trained only on earlier data.
+
+| Turbine | MAE ↓ | RMSE ↓ | R² ↑ |
+| --- | ---: | ---: | ---: |
+| Turbine 1 | 0.0244 | 0.0522 | 0.9796 |
+| Turbine 2 | 0.0281 | 0.0798 | 0.9518 |
+
+The average absolute error corresponds to approximately **2.44 and 2.81 percentage points of rated capacity**. MAE was about **29% lower** than the wind-to-power baseline for each turbine.
+
+**These are power-model scores using observed weather**, not end-to-end accuracy with imperfect weather forecasts. The deployed model bundles were subsequently trained through January 31; the table describes the earlier holdout evaluation.
+
+Historical replay covers **29 forecast dates, 58 agent runs and 4,176 hourly predictions** across both horizons and turbines. Weather availability and model training cutoffs are checked against the forecast origin to avoid using future information. Actual February power measurements were not provided, so February forecast accuracy has not been measured.
+
+[Model comparison](ml/reports/model_comparison.md) · [Reproducibility audit](ml/reports/ml_audit.md) · [Replay manifest](reports/agent_backtest/manifest.json) · [Agent run logs](reports/agent_backtest/runs.jsonl)
+
+## Run locally
+
+Install and start Docker with Docker Compose, then run:
+
+```bash
+git clone https://github.com/mlkad/ai-wind.git
+cd ai-wind
+docker compose up --build
+```
+
+Open **[http://localhost:5173](http://localhost:5173)**. Try **February 1, 2026 → Both turbines → 48 h → Run agent**. The dashboard also runs an initial forecast automatically.
+
+The first build requires internet access to download dependencies. Trained models and a weather archive are included in the repository; no API key is required. API documentation is available at **[http://localhost:8000/docs](http://localhost:8000/docs)**.
+
+For optional configuration, copy `.env.example` to `.env` before starting Docker:
+
+| Setting | Purpose |
 | --- | --- |
-| Проверили и подготовили историю измерений | **291 859 исходных записей** |
-| Собрали данные для обучения | **48 452 почасовых наблюдения** за март 2023 — январь 2026 |
-| Обучили модели | **Две основные модели**, по одной на турбину, и две ранние версии для проверки прошлых дат |
-| Рассчитали прогнозы на архивной погоде | **29 ежедневных запусков**, два горизонта, **4 176 прогнозных значений** |
-| Проверили повторяемость результатов | **58 автоматических ML-тестов** и повторное обучение с совпадением предсказаний по сохранённому аудиту |
+| `MODEL_ADAPTER=real` | Use the bundled CatBoost models; this is the default. |
+| `WEATHER_PROVIDER=open_meteo` | Retrieve archived Single Runs forecasts, with the saved archive as fallback. |
+| `WEATHER_PROVIDER=archive` | Use the bundled weather archive without weather API requests. |
+| `OPENAI_API_KEY` | Optional: enable LLM explanations. Leave empty for template explanations. |
 
-Мы связали интерфейс, сервер, погоду и обученные модели в одно приложение. Агент проверяет входные данные и прогноз, сообщает о проблемах и при необходимости выполняет повторный расчёт. **В `main` по умолчанию используются настоящие обученные модели.**
+The dashboard sends its selected language with each request. Switching EN/RU reruns the last submitted forecast to generate matching agent messages and explanations. The preference persists across page reloads.
 
-## Почему это Agentic AI
+## Stack and repository layout
 
-**Агент самостоятельно принимает решение, достаточно ли надёжен результат или нужен пересчёт.** Его цикл: получение погоды → проверка данных → подготовка входов → запуск модели → проверка прогноза → анализ → пересчёт при необходимости → объяснение.
+| Layer | Technologies | Location |
+| --- | --- | --- |
+| Dashboard | React, TypeScript, Vite, Tailwind CSS, Recharts, i18next | [`frontend/`](frontend/) |
+| API and agent | FastAPI, Pydantic, pandas | [`backend/`](backend/) |
+| Forecasting | CatBoost, per-turbine models and inference code | [`ml/`](ml/) |
+| Weather inputs | Archived Open-Meteo Single Runs | [`data/weather/`](data/weather/) |
+| Evidence | Replay outputs and recorded release checks | [`reports/`](reports/) |
+| Deployment | Docker Compose and a single-service Render configuration | [`render.yaml`](render.yaml), [`Dockerfile.render`](Dockerfile.render) |
 
-Он проверяет почасовую непрерывность, пропуски и допустимые диапазоны, сопоставляет мощность со скоростью ветра и повторно проверяет погодные входы. Обновление доступной на момент прогноза погоды, выход мощности за границы или существенные физические противоречия запускают повторный расчёт. Пересчёт ограничен одной попыткой; при его ошибке сохраняется исходный проверенный прогноз и выводится предупреждение.
+The Render configuration packages the built dashboard and API into one Docker service. It is deployment configuration, not evidence of a running public instance.
 
-**Каждый шаг имеет статус, длительность и объяснение решения.** Журналы полного прогона сохранены в репозитории. CatBoost рассчитывает мощность; OpenAI получает уже рассчитанные факты и объясняет их по-русски. Без ключа используется шаблонное объяснение.
+## Development checks
 
-## Прогноз как будто в прошлом
+Frontend:
 
-**Воспроизведены 29 дат выпуска с 31 января по 28 февраля 2026 года:** 58 запусков полного агента для горизонтов 24 и 48 часов, обе турбины, **4 176 почасовых прогнозных значений**. Время площадки: `Asia/Almaty`.
+```bash
+cd frontend
+npm ci
+npm test
+npm run build
+```
 
-Используются отдельные архивные запуски **Open-Meteo Single Runs**, доступные на соответствующий момент прогнозирования. Проверяется условие `weather_valid_time <= forecast_origin <= timestamp`: погода должна быть доступна до выпуска прогноза. Модель также выбирается с учётом доступности её обучающей истории; для 31 января предусмотрены ранние версии моделей. Фактическая мощность февраля в расчёте не используется.
+Backend, from the repository root in an activated Python virtual environment:
 
-[Итог 58 запусков](reports/agent_backtest/manifest.json) · [Журнал действий агента](reports/agent_backtest/runs.jsonl) · [Прогнозы на 24 ч](reports/agent_backtest/predictions_24h.csv) · [Прогнозы на 48 ч](reports/agent_backtest/predictions_48h.csv)
+```bash
+pip install -r backend/requirements-dev.txt -r backend/requirements-ml.txt
+PYTHONPATH=backend python -m pytest backend/tests -q
+```
 
-## Проверено перед сдачей
+The backend tests cover validation, model failures, weather fallback, recomputation and request-scoped EN/RU behavior. Frontend tests check translation coverage, interpolation parameters and plural forms. Earlier release checks are recorded in [`reports/release_validation.json`](reports/release_validation.json); they describe that release rather than a current deployment.
 
-| Проверка | Подтверждённый результат |
-| --- | --- |
-| Автоматические тесты | **82 теста бэкенда + 58 ML-тестов прошли** |
-| Полный исторический сценарий | **58 запусков агента без ошибок**, оба горизонта и обе турбины |
-| Сборка и запуск | Фронтенд и Docker собираются; чистый образ из `main` рассчитывает прогноз **без API-ключа и без сети**, используя настоящую модель и сохранённый архив |
-| Реальные внешние сервисы | **Четыре успешные проверки** на 31 января, 1, 12 и 20 февраля: CatBoost, архив Open-Meteo и русское объяснение OpenAI |
-
-Это результаты зафиксированной проверки, а не оценка точности за февраль: [отчёт готовности](reports/release_validation.json), [результаты живых запросов](reports/delivery_checks.json), [скрипт повторной проверки](backend/scripts/check_delivery.py).
-
-## Как мы проверили результат
-
-Мы дали модели погоду за декабрь 2025 — январь 2026 и сравнили её расчёты с реальными измерениями мощности. При обучении проверяемая модель ещё не видела этот период.
-
-**Если представить номинальную мощность турбины как 100 единиц, расчёт расходился с фактом в среднем на 2,4 единицы у первой турбины и на 2,8 у второй.** Это средняя ошибка: в отдельные часы она может быть больше.
-
-По сравнению с простым расчётом только по зависимости мощности от ветра **средняя ошибка уменьшилась примерно на 29%**.
-
-<img src="ml/reports/figures/readme_baseline_mae.png" alt="Средняя ошибка CatBoost и трёх базовых методов для двух турбин" width="860">
-
-**Ниже столбец, точнее расчёт.** CatBoost сравнивается с повтором последнего значения, предыдущего дня и зависимостью мощности от ветра. Золотой цвет обозначает первую турбину, зелёный вторую.
-
-<img src="ml/reports/figures/readme_holdout_prediction_vs_actual.png" alt="Фактическая мощность и расчёт модели на трёх 48-часовых окнах декабря и января" width="860">
-
-**Светлая линия: реальные измерения. Цветной пунктир: расчёт модели.** Три фиксированных 48-часовых примера показывают и совпадения, и ошибки. Верхний ряд относится к первой турбине, нижний ко второй.
-
-Эта проверка использует уже известную погоду. В реальной работе ошибка погодного прогноза тоже влияет на результат. Февральские прогнозы мы уже рассчитали, но проверить их точность пока нельзя: фактические измерения за февраль не предоставлены.
-
-[Модели и файлы обучения](ml/models/) · [Подробные результаты и графики](ml/reports/model_comparison.md) · [Проверка воспроизводимости](ml/reports/ml_audit.md) · [Февральские прогнозы](ml/reports/february_backtest/README.md)
-
-## Как открыть проект у себя
-
-1. Скачайте репозиторий (**Code → Download ZIP**) и распакуйте. Установите и запустите **Docker Desktop**.
-2. Откройте терминал в папке с `docker-compose.yml` и выполните:
-
-   ```bash
-   docker compose up --build
-   ```
-
-3. Дождитесь запуска и откройте **[http://localhost:5173](http://localhost:5173)**. Выберите **1 февраля 2026 → обе турбины → 48 ч → «Запустить агента»**.
-
-При первом запуске нужен интернет для сборки. Ключи API не обязательны: при недоступности погодного API используется сохранённый архив, а текст объяснения формируется по шаблону. Модель мощности остаётся настоящей. Ссылка `localhost` работает на том компьютере, где запущен проект.
-
-## Дальнейшее развитие
-
-Следующие возможности **запланированы**:
-
-- **Интервалы неопределённости:** показывать диапазон вероятной мощности для планирования резерва.
-- **Контроль точности после поступления факта:** сопоставлять прогнозы с измерениями, отслеживать рост ошибки и необходимость переобучения.
-- **Подключение новых ВЭС:** расширять систему на другие площадки с их координатами, историей и моделями турбин.
-
----
-
-**Технологии:** React — интерфейс · FastAPI — сервер · CatBoost — прогноз мощности · Open-Meteo — погода · Docker — запуск.
-
-Для разработчиков: [Backend](backend/README.md) · [ML](ml/README.md).
+Further documentation: [Frontend](frontend/README.md) · [Backend](backend/README.md) · [ML](ml/README.md). Some detailed technical reports are in Russian.
